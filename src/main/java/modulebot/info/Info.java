@@ -21,7 +21,6 @@ public class Info extends Command {
 
     @Override
     public void run(Message m) {
-        String[] args = getArgs(m);
-        send(args[0]);
+        send("Currently WIP");
     }
 }

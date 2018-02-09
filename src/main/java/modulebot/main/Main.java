@@ -22,15 +22,18 @@ public class Main extends ListenerAdapter implements CommandHost {
     public static HashMap<Long, String> prefix = new HashMap<>();
     public static HashMap<Long, HashMap<String, ArrayList<String>>> settings = new HashMap<>(); // users, roles, etc
     public static HashMap<String, Command[]> modules = new HashMap<>();
+    public static HashMap<String, String> moduleInfo = new HashMap<>();
     private static HashMap<Long, LinkedHashMap<String, String>> messages = new HashMap<>();
+
+    private static boolean launchSuccess = true;
 
     public static Connection conn;
 
-    public static void main(String[] args) throws LoginException, InterruptedException, InstantiationException, IllegalAccessException {
+    public static void main(String[] args) throws LoginException, InterruptedException {
         if (args.length < 5) return;
-        new JDABuilder(AccountType.BOT).setToken(args[0]).buildBlocking().addEventListener(
-                new Main(args[1], args[2], args[3], args[4])
-        );
+        ListenerAdapter la = new Main(args[1], args[2], args[3], args[4]);
+        if (!launchSuccess) return;
+        new JDABuilder(AccountType.BOT).setToken(args[0]).buildBlocking().addEventListener(la);
     }
 
     private static void openDB(String user, String pass, String name, String server) throws SQLException {
@@ -52,7 +55,7 @@ public class Main extends ListenerAdapter implements CommandHost {
                 new Ping(),
                 new Prefix(),
                 new Permissions(),
-                new Moudule()
+                new Module()
         };
     }
 
@@ -62,7 +65,7 @@ public class Main extends ListenerAdapter implements CommandHost {
     @Override
     public String getDescription() { return "Hosts main commands"; }
 
-    private Main(String user, String pass, String name, String server) throws IllegalAccessException, InstantiationException {
+    private Main(String user, String pass, String name, String server) {
         try {
             Main.openDB(user, pass, name, server);
             Statement st = Main.conn.createStatement();
@@ -102,6 +105,7 @@ public class Main extends ListenerAdapter implements CommandHost {
         };
         for (CommandHost module : modules1) {
             modules.put(module.getName(), module.getCommands());
+            moduleInfo.put(module.getName(), module.getDescription());
         }
         /*Reflections reflections = new Reflections("modulebot");
         Set<Class<? extends CommandHost>> classes = reflections.getSubTypesOf(CommandHost.class);
@@ -109,6 +113,19 @@ public class Main extends ListenerAdapter implements CommandHost {
             CommandHost ch = c.newInstance();
             modules.put(ch.getName(), ch.getCommands());
         }*/
+
+        // Checking if everything with the modules is alright
+        if (modules.size() != moduleInfo.size()) launchSuccess = false;
+        for (String m : modules.keySet()) launchSuccess = launchSuccess && moduleInfo.containsKey(m) &&
+                    m.trim().split(" ").length == 1;
+        for (Command[] cmds : modules.values()) {
+            ArrayList<String> e = new ArrayList<>();
+            for (Command c : cmds) {
+                String n = c.getName();
+                if (e.contains(n) || n.trim().split(" ").length > 1) launchSuccess = false;
+                e.add(n);
+            }
+        }
     }
 
     @Override
@@ -132,16 +149,16 @@ public class Main extends ListenerAdapter implements CommandHost {
         for (Role r : event.getMember().getRoles())
             if (settings.get(gid).get("admRoles").contains(r.getId())) admin = true;
 
-        Command c = getCommand(cmds, gid);
+        AbstractMap.SimpleEntry<Integer, Command> res = getCommand(cmds, gid);
+        Command c = res.getValue();
         if (c != null) {
             messages.get(gid).put(event.getMessageId(), c.execute(event.getMessage(), admin, null));
         } else {
-            messages.get(gid).put(event.getMessageId(),
-                    event.getChannel().sendMessage("Command not found").complete().getId()
-            );
+            messages.get(gid).put(event.getMessageId(), event.getChannel().sendMessage(
+                    res.getKey() == 1 ? "Command not found" : "Duplicate, please specify module"
+            ).complete().getId());
         }
     }
-
     @Override
     public void onGuildMessageUpdate(GuildMessageUpdateEvent event) {
         String content = event.getMessage().getContentRaw();
@@ -154,35 +171,36 @@ public class Main extends ListenerAdapter implements CommandHost {
         for (Role r : event.getMember().getRoles())
             if (settings.get(gid).get("banRoles").contains(r.getId())) return;
 
-        content = content.substring(content.startsWith(prefix) ? prefix.length() : su.getAsMention().length()).trim();
+        String[] cmds = content.substring(content.startsWith(prefix) ? prefix.length() : su.getAsMention().length())
+                .trim().toLowerCase().split(" ");
+        for (int i = 0; i < cmds.length; i++) cmds[i] = cmds[i].trim();
         boolean admin = false;
 
         if (settings.get(gid).get("admUsers").contains(event.getAuthor().getId())) admin = true;
         for (Role r : event.getMember().getRoles())
             if (settings.get(gid).get("admRoles").contains(r.getId())) admin = true;
 
-        String[] cmds = content.toLowerCase().split(" ");
-
-        Command c = getCommand(cmds, gid);
+        AbstractMap.SimpleEntry<Integer, Command> res = getCommand(cmds, gid);
+        Command c = res.getValue();
         if (c != null) {
             c.execute(event.getMessage(), admin, messages.get(gid).get(event.getMessageId()));
         } else {
             event.getChannel().editMessageById(messages.get(gid).get(event.getMessageId()),
-                    "Command not found"
+                    res.getKey() == 1 ? "Command not found" : "Duplicate, please specify module"
             ).queue();
         }
     }
 
-    private static Command getCommand(String[] cmds, long gid) {
+    private static AbstractMap.SimpleEntry<Integer, Command> getCommand(String[] cmds, long gid) {
         ArrayList<String> modulesS = Main.settings.get(gid).get("modules");
         if (cmds.length > 1) for (String module : modulesS) if (module.equals(cmds[0]))
-            for (Command c : modules.get(module)) if (c.getName().equals(cmds[1])) return c.cloneCMD();
+            for (Command c : modules.get(module)) if (c.getName().equals(cmds[1])) return new AbstractMap.SimpleEntry<>(0, c.cloneCMD());
         Command cmd = null;
         for (String module : Main.settings.get(gid).get("modules"))
             for (Command c : modules.get(module))
-                if (c.getName().equals(cmds[0])) if (cmd == null) cmd = c.cloneCMD(); else return null;
-        for (Command c : modules.get("main")) if (c.getName().equals(cmds[0])) return c.cloneCMD();
-        return cmd;
+                if (c.getName().equals(cmds[0])) if (cmd == null) cmd = c.cloneCMD(); else return new AbstractMap.SimpleEntry<>(2, null);
+        for (Command c : modules.get("main")) if (c.getName().equals(cmds[0])) return new AbstractMap.SimpleEntry<>(0, c.cloneCMD());
+        return new AbstractMap.SimpleEntry<>(cmd == null ? 1 : 0, cmd);
     }
 
     @Override

@@ -45,7 +45,7 @@ public abstract class Command implements CMDI {
         );
     }
 
-    public void send(String m) {
+    public void send(CharSequence m) {
         if (m.length() > 2000) m = "**ERROR**: Message is too long";
         send(new MessageBuilder().append(m).build());
     }

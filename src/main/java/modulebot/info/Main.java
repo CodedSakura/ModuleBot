@@ -7,7 +7,8 @@ public class Main implements CommandHost {
     @Override
     public Command[] getCommands() {
         return new Command[] {
-                new Info()
+                new Info(),
+                new UserInfo()
         };
     }
 
