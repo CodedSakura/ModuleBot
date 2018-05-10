@@ -8,7 +8,9 @@ public class Main implements CommandHost {
     public Command[] getCommands() {
         return new Command[] {
                 new Info(),
-                new UserInfo()
+                new UserInfo(),
+                new RoleInfo(),
+                new ChannelInfo()
         };
     }
 

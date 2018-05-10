@@ -25,18 +25,23 @@ public class UserInfo extends Command {
 
     @Override
     public String[] getUsages() {
-        return new String[]{"[id]", "[username]", "[nickname]"};
+        return new String[]{"[ID]", "[username]", "[nickname]"};
     }
 
     @Override
     public void run(Message m) {
-        String[] args = getArgs(m);
+        String o = get(getArgs(m), m);
+        if (o.startsWith("$ERROR$")) o = o.substring(7);
+        send(o);
+    }
+
+    static String get(String[] args, Message m) {
         User u = null;
         if (args.length == 0) u = m.getAuthor();
         else {
-            if (args[0].matches("\\d{16,20}")) {
-                if (m.getJDA().getUserById(args[0]) != null) u = m.getJDA().getUserById(args[0]);
-            } else {
+            if (args[0].matches("\\d{17,18}") && m.getJDA().getUserById(args[0]) != null)
+                u = m.getJDA().getUserById(args[0]);
+            else {
                 int e = 0;
                 List<User> users = m.getJDA().getUsersByName(args[0], true);
                 List<Member> members = m.getGuild().getMembersByEffectiveName(args[0], true);
@@ -61,46 +66,35 @@ public class UserInfo extends Command {
                     } else u = members.get(0).getUser();
                 } else e = 2;
                 if (e == 1) {
-                    send("Multiple users found");
-                    return;
+                    return "$ERROR$Multiple users found, use ID if possible";
                 }
                 if (e == 2) {
-                    send("User not found");
-                    return;
+                    return "$ERROR$User not found";
                 }
             }
         }
         if (u == null) {
-            send("User not found");
-            return;
+            return "$ERROR$User not found";
         }
         StringBuilder sb = new StringBuilder("```\n");
         Member mbr = m.getGuild().getMember(u);
         Map<String, String> s = new LinkedHashMap<>();
-        {
-            s.put("name",          u.getName());
-            s.put("discriminator", "#" + u.getDiscriminator());
-            s.put("id",            u.getId());
-            s.put("is a bot",      u.isBot() ? "yes" : "no");
-            s.put("created",       u.getCreationTime().format(DateTimeFormatter.RFC_1123_DATE_TIME));
-            s.put("in this guild", mbr != null ? "yes" : "no");
-        }
+        s.put("name",          u.getName());
+        s.put("discriminator", "#" + u.getDiscriminator());
+        s.put("id",            u.getId());
+        s.put("is a bot",      u.isBot() ? "yes" : "no");
+        s.put("created",       u.getCreationTime().format(DateTimeFormatter.RFC_1123_DATE_TIME));
+        s.put("in this guild", mbr != null ? "yes" : "no");
         if (mbr != null) {
-            s.put("nick",        mbr.getNickname() == null ? "no" : "yes, " + mbr.getNickname());
+            s.put("nick",        mbr.getNickname() == null ? "no" : "yes, `" + mbr.getNickname() + "\"");
             s.put("is owner",    mbr.isOwner() ? "yes" : "no");
             s.put("role amount", Integer.toString(mbr.getRoles().size()));
             s.put("roles",       mbr.getRoles().stream().map(Role::getName).collect(Collectors.joining(", ")));
             s.put("status",      mbr.getOnlineStatus().getKey().toLowerCase());
-            s.put("game",        (mbr.getGame() != null ? mbr.getGame().getName() : "none"));
+            s.put("game",        (mbr.getGame() != null ? "`" + mbr.getGame().getName() + "\"" : "none"));
             s.put("join date",   mbr.getJoinDate().format(DateTimeFormatter.RFC_1123_DATE_TIME));
         }
-        for (String k : s.keySet()) sb.append(k).append(spaces(k)).append(s.get(k)).append("\n");
-        send(sb.append("\n```").append(u.getAvatarUrl()).toString());
-    }
-
-    private String spaces(String k) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = k.length(); i < 16; i++) sb.append(" ");
-        return sb.toString();
+        for (String k : s.keySet()) sb.append(k).append(Info.spaces(k)).append(s.get(k)).append("\n");
+        return sb.append("\n```").append(u.getAvatarUrl()).toString();
     }
 }

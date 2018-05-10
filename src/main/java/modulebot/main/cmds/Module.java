@@ -26,6 +26,10 @@ public class Module extends Command {
     @Override
     public void run(Message m) throws Exception {
         String[] args = getArgs(m);
+        if (args.length == 0) {
+            defaultRun();
+            return;
+        }
         long gid = m.getGuild().getIdLong();
         if (args[0].equals("info")) {
             if (args.length > 1 && Main.moduleInfo.containsKey(args[1])) {
