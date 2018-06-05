@@ -1,5 +1,6 @@
-package modulebot.main;
+package modulebot.main.hosts;
 
+import modulebot.main.Main;
 import net.dv8tion.jda.core.MessageBuilder;
 import net.dv8tion.jda.core.entities.Message;
 import net.dv8tion.jda.core.entities.MessageEmbed;
@@ -11,7 +12,7 @@ import java.util.Arrays;
 public abstract class Command implements CMDI {
     private String id;
     private TextChannel channel;
-    public boolean admin;
+    protected boolean admin;
 
     public String execute(Message m, boolean admin, String id) {
         this.id = id;
@@ -80,7 +81,7 @@ public abstract class Command implements CMDI {
         };
     }
 
-    public String trimPrefix(Message m) {
+    protected String trimPrefix(Message m) {
         String c = m.getContentRaw();
         String prefix = Main.prefix.get(m.getGuild().getIdLong());
         return c.substring(
@@ -88,7 +89,7 @@ public abstract class Command implements CMDI {
         ).trim();
     }
 
-    public String[] getArgs(Message m) {
+    protected String[] getArgs(Message m) {
         ArrayList<String> args = new ArrayList<>(Arrays.asList(trimPrefix(m).toLowerCase().split(" ")));
         args.replaceAll(String::trim);
         if (args.size() < 2) return new String[0];

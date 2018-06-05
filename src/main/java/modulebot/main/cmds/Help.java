@@ -1,6 +1,6 @@
 package modulebot.main.cmds;
 
-import modulebot.main.Command;
+import modulebot.main.hosts.Command;
 import modulebot.main.Main;
 import net.dv8tion.jda.core.entities.Message;
 

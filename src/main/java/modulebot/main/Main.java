@@ -2,28 +2,47 @@ package modulebot.main;
 
 import com.mysql.jdbc.jdbc2.optional.MysqlDataSource;
 import modulebot.main.cmds.*;
+import modulebot.main.hosts.CH;
+import modulebot.main.hosts.Command;
+import modulebot.main.hosts.CommandHost;
 import net.dv8tion.jda.core.AccountType;
 import net.dv8tion.jda.core.JDABuilder;
+import net.dv8tion.jda.core.entities.Guild;
 import net.dv8tion.jda.core.entities.Role;
 import net.dv8tion.jda.core.entities.SelfUser;
 import net.dv8tion.jda.core.events.DisconnectEvent;
+import net.dv8tion.jda.core.events.ReadyEvent;
+import net.dv8tion.jda.core.events.emote.EmoteAddedEvent;
+import net.dv8tion.jda.core.events.emote.EmoteRemovedEvent;
+import net.dv8tion.jda.core.events.emote.update.EmoteUpdateNameEvent;
+import net.dv8tion.jda.core.events.emote.update.EmoteUpdateRolesEvent;
+import net.dv8tion.jda.core.events.guild.*;
+import net.dv8tion.jda.core.events.guild.member.*;
+import net.dv8tion.jda.core.events.guild.update.*;
+import net.dv8tion.jda.core.events.guild.voice.*;
+import net.dv8tion.jda.core.events.message.guild.GuildMessageDeleteEvent;
+import net.dv8tion.jda.core.events.message.guild.GuildMessageEmbedEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageReceivedEvent;
 import net.dv8tion.jda.core.events.message.guild.GuildMessageUpdateEvent;
+import net.dv8tion.jda.core.events.message.guild.react.GuildMessageReactionAddEvent;
+import net.dv8tion.jda.core.events.message.guild.react.GuildMessageReactionRemoveAllEvent;
+import net.dv8tion.jda.core.events.message.guild.react.GuildMessageReactionRemoveEvent;
+import net.dv8tion.jda.core.events.role.RoleCreateEvent;
+import net.dv8tion.jda.core.events.role.RoleDeleteEvent;
+import net.dv8tion.jda.core.events.role.update.*;
 import net.dv8tion.jda.core.hooks.ListenerAdapter;
 
 import javax.security.auth.login.LoginException;
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.*;
 
-public class Main extends ListenerAdapter implements CommandHost {
+public class Main extends ListenerAdapter implements CH {
     public static HashMap<Long, String> prefix = new HashMap<>();
     public static HashMap<Long, HashMap<String, ArrayList<String>>> settings = new HashMap<>(); // users, roles, etc
     public static HashMap<String, Command[]> modules = new HashMap<>();
     public static HashMap<String, String> moduleInfo = new HashMap<>();
     private static HashMap<Long, LinkedHashMap<String, String>> messages = new HashMap<>();
+    public static HashMap<String, CommandHost> commandHosts = new HashMap<>();
 
     private static boolean launchSuccess = true;
 
@@ -33,7 +52,7 @@ public class Main extends ListenerAdapter implements CommandHost {
         if (args.length < 5) return;
         ListenerAdapter la = new Main(args[1], args[2], args[3], args[4]);
         if (!launchSuccess) return;
-        new JDABuilder(AccountType.BOT).setToken(args[0]).buildBlocking().addEventListener(la);
+        new JDABuilder(AccountType.BOT).setToken(args[0]).addEventListener(la).buildBlocking();
     }
 
     private static void openDB(String user, String pass, String name, String server) throws SQLException {
@@ -69,6 +88,16 @@ public class Main extends ListenerAdapter implements CommandHost {
         try {
             Main.openDB(user, pass, name, server);
             Statement st = Main.conn.createStatement();
+            st.execute("" +
+                    "create table if not exists servers(" +
+                        "id       bigint unsigned not null unique," +
+                        "prefix   text            not null," +
+                        "modules  text            null," +
+                        "banUsers text            null," +
+                        "banRoles text            null," +
+                        "admUsers text            null," +
+                        "admRoles text            null" +
+                    ") COLLATE utf8_bin engine InnoDB");
             ResultSet rs = st.executeQuery("SELECT * FROM servers");
             while (rs.next()) {
                 long id = rs.getLong("id");
@@ -99,18 +128,19 @@ public class Main extends ListenerAdapter implements CommandHost {
         }
 
 
-        CommandHost[] modules1 = new CommandHost[] {
+        for (CH ch : new CH[] {
                 this,
-                new modulebot.info.Main()
-        };
-        for (CommandHost module : modules1) {
-            modules.put(module.getName(), module.getCommands());
-            moduleInfo.put(module.getName(), module.getDescription());
+                new modulebot.info.Main(),
+                new modulebot.voiceText.Main()
+        }) {
+            if (ch instanceof CommandHost) commandHosts.put(ch.getName(), (CommandHost) ch);
+            modules.put(ch.getName(), ch.getCommands());
+            moduleInfo.put(ch.getName(), ch.getDescription());
         }
         /*Reflections reflections = new Reflections("modulebot");
-        Set<Class<? extends CommandHost>> classes = reflections.getSubTypesOf(CommandHost.class);
-        for (Class<? extends CommandHost> c : classes) {
-            CommandHost ch = c.newInstance();
+        Set<Class<? extends CH>> classes = reflections.getSubTypesOf(CH.class);
+        for (Class<? extends CH> c : classes) {
+            CH ch = c.newInstance();
             modules.put(ch.getName(), ch.getCommands());
         }*/
 
@@ -129,7 +159,42 @@ public class Main extends ListenerAdapter implements CommandHost {
     }
 
     @Override
+    public void onReady(ReadyEvent event) {
+        try {
+            boolean fine = true;
+            for (Guild g : event.getJDA().getGuilds()) {
+                if (!settings.containsKey(g.getIdLong())) {
+                    fine = false;
+                    System.out.println("INITIALISING DB FOR " + g.getName());
+                    PreparedStatement ps = conn.prepareStatement("INSERT INTO servers VALUES (?,'%','main','','',?,'')");
+                    ps.setLong(1, g.getIdLong());
+                    ps.setString(2, g.getOwner().getUser().getId());
+                    ps.execute();
+                    ps.close();
+                }
+            }
+            if (!fine) {
+                System.out.println("SHUTDOWN IMMINENT");
+                event.getJDA().shutdown();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        for (CommandHost ch : commandHosts.values()) ch.onReady(event);
+
+        for (Long g : Main.settings.keySet()) {
+            for (String m : Main.settings.get(g).get("modules")) {
+                if (commandHosts.containsKey(m)) commandHosts.get(m).onEnabled(g);
+            }
+        }
+    }
+
+    @Override
     public void onGuildMessageReceived(GuildMessageReceivedEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMessageReceived(event);
+
         String content = event.getMessage().getContentRaw();
         SelfUser su = event.getJDA().getSelfUser();
         long gid = event.getGuild().getIdLong();
@@ -143,8 +208,8 @@ public class Main extends ListenerAdapter implements CommandHost {
         String[] cmds = content.substring(content.startsWith(prefix) ? prefix.length() : su.getAsMention().length())
                 .trim().toLowerCase().split(" ");
         for (int i = 0; i < cmds.length; i++) cmds[i] = cmds[i].trim();
-        boolean admin = false;
 
+        boolean admin = false;
         if (settings.get(gid).get("admUsers").contains(event.getAuthor().getId())) admin = true;
         for (Role r : event.getMember().getRoles())
             if (settings.get(gid).get("admRoles").contains(r.getId())) admin = true;
@@ -161,6 +226,9 @@ public class Main extends ListenerAdapter implements CommandHost {
     }
     @Override
     public void onGuildMessageUpdate(GuildMessageUpdateEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMessageUpdate(event);
+
         String content = event.getMessage().getContentRaw();
         SelfUser su = event.getJDA().getSelfUser();
         long gid = event.getGuild().getIdLong();
@@ -174,8 +242,8 @@ public class Main extends ListenerAdapter implements CommandHost {
         String[] cmds = content.substring(content.startsWith(prefix) ? prefix.length() : su.getAsMention().length())
                 .trim().toLowerCase().split(" ");
         for (int i = 0; i < cmds.length; i++) cmds[i] = cmds[i].trim();
-        boolean admin = false;
 
+        boolean admin = false;
         if (settings.get(gid).get("admUsers").contains(event.getAuthor().getId())) admin = true;
         for (Role r : event.getMember().getRoles())
             if (settings.get(gid).get("admRoles").contains(r.getId())) admin = true;
@@ -210,5 +278,289 @@ public class Main extends ListenerAdapter implements CommandHost {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+
+    /*
+    * ================================================================
+    * =                        EVENT HANDLERS                        =
+    * ================================================================
+    * */
+
+    @Override
+    public void onGuildMessageDelete(GuildMessageDeleteEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMessageDelete(event);
+    }
+    @Override
+    public void onGuildMessageEmbed(GuildMessageEmbedEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMessageEmbed(event);
+    }
+    @Override
+    public void onGuildMessageReactionAdd(GuildMessageReactionAddEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMessageReactionAdd(event);
+    }
+    @Override
+    public void onGuildMessageReactionRemove(GuildMessageReactionRemoveEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMessageReactionRemove(event);
+    }
+    @Override
+    public void onGuildMessageReactionRemoveAll(GuildMessageReactionRemoveAllEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMessageReactionRemoveAll(event);
+    }
+
+    //Guild Events
+    @Override
+    public void onGuildJoin(GuildJoinEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildJoin(event);
+    }
+    @Override
+    public void onGuildLeave(GuildLeaveEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildLeave(event);
+    }
+    @Override
+    public void onGuildAvailable(GuildAvailableEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildAvailable(event);
+    }
+    @Override
+    public void onGuildUnavailable(GuildUnavailableEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUnavailable(event);
+    }
+    @Override
+    public void onGuildBan(GuildBanEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildBan(event);
+    }
+    @Override
+    public void onGuildUnban(GuildUnbanEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUnban(event);
+    }
+
+    //Guild Update Events
+    @Override
+    public void onGuildUpdateAfkChannel(GuildUpdateAfkChannelEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateAfkChannel(event);
+    }
+    @Override
+    public void onGuildUpdateSystemChannel(GuildUpdateSystemChannelEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateSystemChannel(event);
+    }
+    @Override
+    public void onGuildUpdateAfkTimeout(GuildUpdateAfkTimeoutEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateAfkTimeout(event);
+    }
+    @Override
+    public void onGuildUpdateExplicitContentLevel(GuildUpdateExplicitContentLevelEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateExplicitContentLevel(event);
+    }
+    @Override
+    public void onGuildUpdateIcon(GuildUpdateIconEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateIcon(event);
+    }
+    @Override
+    public void onGuildUpdateMFALevel(GuildUpdateMFALevelEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateMFALevel(event);
+    }
+    @Override
+    public void onGuildUpdateName(GuildUpdateNameEvent event){
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateName(event);
+    }
+    @Override
+    public void onGuildUpdateNotificationLevel(GuildUpdateNotificationLevelEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateNotificationLevel(event);
+    }
+    @Override
+    public void onGuildUpdateOwner(GuildUpdateOwnerEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateOwner(event);
+    }
+    @Override
+    public void onGuildUpdateRegion(GuildUpdateRegionEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateRegion(event);
+    }
+    @Override
+    public void onGuildUpdateSplash(GuildUpdateSplashEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateSplash(event);
+    }
+    @Override
+    public void onGuildUpdateVerificationLevel(GuildUpdateVerificationLevelEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateVerificationLevel(event);
+    }
+    @Override
+    public void onGuildUpdateFeatures(GuildUpdateFeaturesEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUpdateFeatures(event);
+    }
+
+    //Guild Member Events
+    @Override
+    public void onGuildMemberJoin(GuildMemberJoinEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMemberJoin(event);
+    }
+    @Override
+    public void onGuildMemberLeave(GuildMemberLeaveEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMemberLeave(event);
+    }
+    @Override
+    public void onGuildMemberRoleAdd(GuildMemberRoleAddEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMemberRoleAdd(event);
+    }
+    @Override
+    public void onGuildMemberRoleRemove(GuildMemberRoleRemoveEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMemberRoleRemove(event);
+    }
+    @Override
+    public void onGuildMemberNickChange(GuildMemberNickChangeEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMemberNickChange(event);
+    }
+
+    //Guild Voice Events
+    @Override
+    public void onGuildVoiceUpdate(GuildVoiceUpdateEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildVoiceUpdate(event);
+    }
+    @Override
+    public void onGuildVoiceJoin(GuildVoiceJoinEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildVoiceJoin(event);
+    }
+    @Override
+    public void onGuildVoiceMove(GuildVoiceMoveEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildVoiceMove(event);
+    }
+    @Override
+    public void onGuildVoiceLeave(GuildVoiceLeaveEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildVoiceLeave(event);
+    }
+    @Override
+    public void onGuildVoiceMute(GuildVoiceMuteEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildVoiceMute(event);
+    }
+    @Override
+    public void onGuildVoiceDeafen(GuildVoiceDeafenEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildVoiceDeafen(event);
+    }
+    @Override
+    public void onGuildVoiceGuildMute(GuildVoiceGuildMuteEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildVoiceGuildMute(event);
+    }
+    @Override
+    public void onGuildVoiceGuildDeafen(GuildVoiceGuildDeafenEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildVoiceGuildDeafen(event);
+    }
+    @Override
+    public void onGuildVoiceSelfMute(GuildVoiceSelfMuteEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildVoiceSelfMute(event);
+    }
+    @Override
+    public void onGuildVoiceSelfDeafen(GuildVoiceSelfDeafenEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildVoiceSelfDeafen(event);
+    }
+    @Override
+    public void onGuildVoiceSuppress(GuildVoiceSuppressEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildVoiceSuppress(event);
+    }
+
+    //Role events
+    @Override
+    public void onRoleCreate(RoleCreateEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onRoleCreate(event);
+    }
+    @Override
+    public void onRoleDelete(RoleDeleteEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onRoleDelete(event);
+    }
+
+    //Role Update Events
+    @Override
+    public void onRoleUpdateColor(RoleUpdateColorEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onRoleUpdateColor(event);
+    }
+    @Override
+    public void onRoleUpdateHoisted(RoleUpdateHoistedEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onRoleUpdateHoisted(event);
+    }
+    @Override
+    public void onRoleUpdateMentionable(RoleUpdateMentionableEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onRoleUpdateMentionable(event);
+    }
+    @Override
+    public void onRoleUpdateName(RoleUpdateNameEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onRoleUpdateName(event);
+    }
+    @Override
+    public void onRoleUpdatePermissions(RoleUpdatePermissionsEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onRoleUpdatePermissions(event);
+    }
+    @Override
+    public void onRoleUpdatePosition(RoleUpdatePositionEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onRoleUpdatePosition(event);
+    }
+
+    //Emote Events
+    @Override
+    public void onEmoteAdded(EmoteAddedEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onEmoteAdded(event);
+    }
+    @Override
+    public void onEmoteRemoved(EmoteRemovedEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onEmoteRemoved(event);
+    }
+
+    //Emote Update Events
+    @Override
+    public void onEmoteUpdateName(EmoteUpdateNameEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onEmoteUpdateName(event);
+    }
+    @Override
+    public void onEmoteUpdateRoles(EmoteUpdateRolesEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onEmoteUpdateRoles(event);
     }
 }

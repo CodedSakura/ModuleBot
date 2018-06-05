@@ -1,6 +1,6 @@
 package modulebot.info;
 
-import modulebot.main.Command;
+import modulebot.main.hosts.Command;
 import net.dv8tion.jda.core.entities.Member;
 import net.dv8tion.jda.core.entities.Message;
 import net.dv8tion.jda.core.entities.Role;
@@ -86,12 +86,12 @@ public class UserInfo extends Command {
         s.put("created",       u.getCreationTime().format(DateTimeFormatter.RFC_1123_DATE_TIME));
         s.put("in this guild", mbr != null ? "yes" : "no");
         if (mbr != null) {
-            s.put("nick",        mbr.getNickname() == null ? "no" : "yes, `" + mbr.getNickname() + "\"");
+            s.put("nick",        mbr.getNickname() == null ? "no" : "yes, '" + mbr.getNickname() + "'");
             s.put("is owner",    mbr.isOwner() ? "yes" : "no");
             s.put("role amount", Integer.toString(mbr.getRoles().size()));
             s.put("roles",       mbr.getRoles().stream().map(Role::getName).collect(Collectors.joining(", ")));
             s.put("status",      mbr.getOnlineStatus().getKey().toLowerCase());
-            s.put("game",        (mbr.getGame() != null ? "`" + mbr.getGame().getName() + "\"" : "none"));
+            s.put("game",        (mbr.getGame() != null ? "'" + mbr.getGame().getName() + "'" : "none"));
             s.put("join date",   mbr.getJoinDate().format(DateTimeFormatter.RFC_1123_DATE_TIME));
         }
         for (String k : s.keySet()) sb.append(k).append(Info.spaces(k)).append(s.get(k)).append("\n");

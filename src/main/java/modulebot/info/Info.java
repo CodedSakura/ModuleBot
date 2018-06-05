@@ -1,6 +1,6 @@
 package modulebot.info;
 
-import modulebot.main.Command;
+import modulebot.main.hosts.Command;
 import net.dv8tion.jda.core.entities.Message;
 
 public class Info extends Command {
@@ -24,7 +24,13 @@ public class Info extends Command {
         String[] args = getArgs(m);
         String ui = UserInfo.get(args, m);
         if (!ui.startsWith("$ERROR$")) { send(ui); return; }
-        send("Coming soon:tm:");
+        String ri = RoleInfo.get(args, m);
+        if (!ri.startsWith("$ERROR$")) { send(ri); return; }
+        String ci = ChannelInfo.get(args, m);
+        if (!ci.startsWith("$ERROR$")) { send(ci); return; }
+        String ei = EmoteInfo.get(args, m);
+        if (!ei.startsWith("$ERROR$")) { send(ei); return; }
+        send("ERROR, do specific command for more details");
     }
 
     static String spaces(String k) {

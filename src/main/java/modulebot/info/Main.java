@@ -1,16 +1,17 @@
 package modulebot.info;
 
-import modulebot.main.Command;
-import modulebot.main.CommandHost;
+import modulebot.main.hosts.Command;
+import modulebot.main.hosts.CommandHost;
 
-public class Main implements CommandHost {
+public class Main extends CommandHost {
     @Override
     public Command[] getCommands() {
         return new Command[] {
                 new Info(),
                 new UserInfo(),
                 new RoleInfo(),
-                new ChannelInfo()
+                new ChannelInfo(),
+                new EmoteInfo()
         };
     }
 

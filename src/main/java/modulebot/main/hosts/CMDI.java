@@ -1,4 +1,4 @@
-package modulebot.main;
+package modulebot.main.hosts;
 
 import net.dv8tion.jda.core.entities.Message;
 

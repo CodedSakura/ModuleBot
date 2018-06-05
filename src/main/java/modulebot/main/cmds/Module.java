@@ -1,6 +1,6 @@
 package modulebot.main.cmds;
 
-import modulebot.main.Command;
+import modulebot.main.hosts.Command;
 import modulebot.main.Main;
 import net.dv8tion.jda.core.entities.Message;
 
@@ -59,10 +59,19 @@ public class Module extends Command {
                     st.executeUpdate();
                     st.close();
                     send("Module \"" + args[1] + "\" enabled");
+
+                    for (String n : Main.settings.get(m.getGuild().getIdLong()).get("modules")) {
+                        if (Main.commandHosts.containsKey(n)) {
+                            Main.commandHosts.get(n).onEnabled(gid);
+                            Main.commandHosts.get(n).onToggled(gid);
+                        }
+                    }
                 }
             } else {
                 send("Module not found");
             }
+        } else if (args.length > 1 && args[1].equals("main")) {
+            send("You cannot disable the main module");
         } else if (args[0].equals("disable")) {
             if (args.length > 1 && Main.modules.containsKey(args[1])) {
                 if (!Main.settings.get(gid).get("modules").contains(args[1])) {
@@ -75,6 +84,13 @@ public class Module extends Command {
                     st.executeUpdate();
                     st.close();
                     send("Module \"" + args[1] + "\" disabled");
+
+                    for (String n : Main.settings.get(m.getGuild().getIdLong()).get("modules")) {
+                        if (Main.commandHosts.containsKey(n)) {
+                            Main.commandHosts.get(n).onDisabled(gid);
+                            Main.commandHosts.get(n).onToggled(gid);
+                        }
+                    }
                 }
             } else {
                 send("Module not found");

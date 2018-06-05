@@ -1,6 +1,6 @@
-package modulebot.main;
+package modulebot.main.hosts;
 
-public interface CommandHost {
+public interface CH {
     Command[] getCommands();
     String getName();
     String getDescription();
