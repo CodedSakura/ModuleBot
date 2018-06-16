@@ -10,12 +10,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 
 public abstract class Command implements CMDI {
-    private String id;
+    protected String messageID;
     private TextChannel channel;
     protected boolean admin;
 
     public String execute(Message m, boolean admin, String id) {
-        this.id = id;
+        this.messageID = id;
         channel = m.getTextChannel();
         this.admin = admin;
         try {
@@ -24,7 +24,7 @@ public abstract class Command implements CMDI {
             send("**ERROR**: command threw a " + e.getClass().getSimpleName());
             e.printStackTrace();
         }
-        return this.id;
+        return this.messageID;
     }
 
     public Command setChannel(TextChannel channel) {
@@ -32,6 +32,7 @@ public abstract class Command implements CMDI {
         return this;
     }
 
+    // TODO: convert to embeds
     public void defaultRun() {
         StringBuilder usages = new StringBuilder();
         for (String s : getUsages()) {
@@ -57,8 +58,8 @@ public abstract class Command implements CMDI {
         send(new MessageBuilder().append(m).build());
     }
     private void send(Message m) {
-        if (id == null) id = channel.sendMessage(m).complete().getId();
-        else channel.editMessageById(id, m).queue();
+        if (messageID == null) messageID = channel.sendMessage(m).complete().getId();
+        else channel.editMessageById(messageID, m).queue();
     }
 
     public Command cloneCMD() {
@@ -81,7 +82,7 @@ public abstract class Command implements CMDI {
         };
     }
 
-    protected String trimPrefix(Message m) {
+    private String trimPrefix(Message m) {
         String c = m.getContentRaw();
         String prefix = Main.prefix.get(m.getGuild().getIdLong());
         return c.substring(
@@ -100,5 +101,11 @@ public abstract class Command implements CMDI {
         }
         if (args.size() == 0) return new String[0];
         return args.toArray(new String[0]);
+    }
+
+    protected String getArg(Message m) {
+        return m.getContentRaw().substring(
+                m.getContentRaw().length() - String.join(" ", getArgs(m)).length()
+        );
     }
 }

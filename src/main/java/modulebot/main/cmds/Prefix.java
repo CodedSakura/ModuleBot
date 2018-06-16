@@ -24,10 +24,10 @@ public class Prefix extends Command {
 
     @Override
     public void run(Message m) throws Exception {
-        String[] args = getArgs(m);
-        if (args.length != 0 && !admin) {
+        String[] args = getArg(m).split(" ");
+        if (!args[0].equals("") && !admin) {
             send("This command is admin only");
-        } else if (args.length == 0) {
+        } else if (args[0].equals("")) {
             send("Prefix: " + Main.prefix.get(m.getGuild().getIdLong()));
         } else {
             PreparedStatement st = Main.conn.prepareStatement("UPDATE servers SET prefix = ? WHERE id = ?");
@@ -36,6 +36,7 @@ public class Prefix extends Command {
             st.executeUpdate();
             st.close();
             send("Prefix set to \"" + args[0] + "\"");
+            Main.prefix.replace(m.getGuild().getIdLong(), args[0]);
         }
     }
 }

@@ -30,7 +30,7 @@ public class ChannelInfo extends Command {
 
     @Override
     public void run(Message m) {
-        String o = get(getArgs(m), m);
+        String o = get(getArg(m), m);
         if (o.startsWith("$ERROR$")) o = o.substring(7);
         send(o);
     }
@@ -41,29 +41,29 @@ public class ChannelInfo extends Command {
             "$ERROR$Channel not found"
     };
 
-    static String get(String[] args, Message m) {
+    static String get(String args, Message m) {
         TextChannel tc = null;
         VoiceChannel vc = null;
         Category cc = null;
-        if (args.length == 0) return ERR[0];
+        if (args.equals("")) return ERR[0];
         else {
-            if (args[0].matches("\\d{17,18}")) {
-                if (m.getGuild().getTextChannelById(args[0]) != null)
-                    tc = m.getGuild().getTextChannelById(args[0]);
-                else if (m.getGuild().getVoiceChannelById(args[0]) != null)
-                    vc = m.getGuild().getVoiceChannelById(args[0]);
-                else if (m.getGuild().getCategoryById(args[0]) != null)
-                    cc = m.getGuild().getCategoryById(args[0]);
+            if (args.matches("\\d{17,18}")) {
+                if (m.getGuild().getTextChannelById(args) != null)
+                    tc = m.getGuild().getTextChannelById(args);
+                else if (m.getGuild().getVoiceChannelById(args) != null)
+                    vc = m.getGuild().getVoiceChannelById(args);
+                else if (m.getGuild().getCategoryById(args) != null)
+                    cc = m.getGuild().getCategoryById(args);
             } else {
-                List<TextChannel> tcs = m.getGuild().getTextChannelsByName(args[0], true);
-                List<VoiceChannel> vcs = m.getGuild().getVoiceChannelsByName(args[0], true);
-                List<Category> ccs = m.getGuild().getCategoriesByName(args[0], true);
+                List<TextChannel> tcs = m.getGuild().getTextChannelsByName(args, true);
+                List<VoiceChannel> vcs = m.getGuild().getVoiceChannelsByName(args, true);
+                List<Category> ccs = m.getGuild().getCategoriesByName(args, true);
                 if (m.getMentionedChannels().size() > 0) {
                     if (m.getMentionedChannels().size() > 1) return ERR[1];
                     else tc = m.getMentionedChannels().get(0);
                 } else if (tcs.size() != 0) {
                     if (tcs.size() > 1) {
-                        List<TextChannel> tcs2 = m.getGuild().getTextChannelsByName(args[0], false);
+                        List<TextChannel> tcs2 = m.getGuild().getTextChannelsByName(args, false);
                         if (tcs2.size() != 0) {
                             if (tcs2.size() > 1) return ERR[1];
                             else tc = tcs2.get(0);
@@ -72,7 +72,7 @@ public class ChannelInfo extends Command {
                 }
                 if (vcs.size() != 0) {
                     if (vcs.size() > 1) {
-                        List<VoiceChannel> vcs2 = m.getGuild().getVoiceChannelsByName(args[0], false);
+                        List<VoiceChannel> vcs2 = m.getGuild().getVoiceChannelsByName(args, false);
                         if (vcs2.size() != 0) {
                             if (vcs2.size() > 1) return ERR[1];
                             else vc = vcs2.get(0);
@@ -81,7 +81,7 @@ public class ChannelInfo extends Command {
                 }
                 if (ccs.size() != 0) {
                     if (ccs.size() > 1) {
-                        List<Category> ccs2 = m.getGuild().getCategoriesByName(args[0], false);
+                        List<Category> ccs2 = m.getGuild().getCategoriesByName(args, false);
                         if (ccs2.size() != 0) {
                             if (ccs2.size() > 1) return ERR[1];
                             else cc = ccs2.get(0);

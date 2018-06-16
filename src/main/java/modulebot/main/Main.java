@@ -49,7 +49,7 @@ public class Main extends ListenerAdapter implements CH {
     public static Connection conn;
 
     public static void main(String[] args) throws LoginException, InterruptedException {
-        if (args.length < 5) return;
+        if (args.length != 5) return;
         ListenerAdapter la = new Main(args[1], args[2], args[3], args[4]);
         if (!launchSuccess) return;
         new JDABuilder(AccountType.BOT).setToken(args[0]).addEventListener(la).buildBlocking();
@@ -108,11 +108,11 @@ public class Main extends ListenerAdapter implements CH {
                 String banRoles = rs.getString("banRoles");
                 String admUsers = rs.getString("admUsers");
                 String admRoles = rs.getString("admRoles");
-                map.put("modules" , new ArrayList<>(Arrays.asList((modules  == null ? "main" : modules ).split(";"))));
-                map.put("banUsers", new ArrayList<>(Arrays.asList((banUsers == null ? ""     : banUsers).split(";"))));
-                map.put("banRoles", new ArrayList<>(Arrays.asList((banRoles == null ? ""     : banRoles).split(";"))));
-                map.put("admUsers", new ArrayList<>(Arrays.asList((admUsers == null ? ""     : admUsers).split(";"))));
-                map.put("admRoles", new ArrayList<>(Arrays.asList((admRoles == null ? ""     : admRoles).split(";"))));
+                map.put("modules" , new ArrayList<>(Arrays.asList((modules  == null ? "main" : modules.toLowerCase()).split(";"))));
+                map.put("banUsers", new ArrayList<>(Arrays.asList((banUsers == null ? ""     : banUsers             ).split(";"))));
+                map.put("banRoles", new ArrayList<>(Arrays.asList((banRoles == null ? ""     : banRoles             ).split(";"))));
+                map.put("admUsers", new ArrayList<>(Arrays.asList((admUsers == null ? ""     : admUsers             ).split(";"))));
+                map.put("admRoles", new ArrayList<>(Arrays.asList((admRoles == null ? ""     : admRoles             ).split(";"))));
                 settings.put(id, map);
                 messages.put(id, new LinkedHashMap<String, String>() {
                     @Override
@@ -127,15 +127,29 @@ public class Main extends ListenerAdapter implements CH {
             e.printStackTrace();
         }
 
+        /* TODO: implement following
+        random
+          dice
+          8ball
+          flip
+        convert
+        latex
+        time
+        */
 
+        // TODO: fill this list
         for (CH ch : new CH[] {
                 this,
                 new modulebot.info.Main(),
-                new modulebot.voiceText.Main()
+                new modulebot.voiceText.Main(),
+                new modulebot.calc.Main(),
+                new modulebot.PCC.Main(),
+                new modulebot.eval.Main(),
+                new modulebot.greeter.Main()
         }) {
-            if (ch instanceof CommandHost) commandHosts.put(ch.getName(), (CommandHost) ch);
-            modules.put(ch.getName(), ch.getCommands());
-            moduleInfo.put(ch.getName(), ch.getDescription());
+            if (ch instanceof CommandHost) commandHosts.put(ch.getName().toLowerCase(), (CommandHost) ch);
+            modules.put(ch.getName().toLowerCase(), ch.getCommands());
+            moduleInfo.put(ch.getName().toLowerCase(), ch.getDescription());
         }
         /*Reflections reflections = new Reflections("modulebot");
         Set<Class<? extends CH>> classes = reflections.getSubTypesOf(CH.class);
@@ -161,21 +175,27 @@ public class Main extends ListenerAdapter implements CH {
     @Override
     public void onReady(ReadyEvent event) {
         try {
-            boolean fine = true;
             for (Guild g : event.getJDA().getGuilds()) {
-                if (!settings.containsKey(g.getIdLong())) {
-                    fine = false;
+                long gid = g.getIdLong();
+                if (!settings.containsKey(gid)) {
                     System.out.println("INITIALISING DB FOR " + g.getName());
+                    String owner = g.getOwner().getUser().getId();
+                    String botOwner = g.getJDA().asBot().getApplicationInfo().complete().getOwner().getId();
+                    if (!owner.equals(botOwner)) owner += ";" + botOwner;
                     PreparedStatement ps = conn.prepareStatement("INSERT INTO servers VALUES (?,'%','main','','',?,'')");
-                    ps.setLong(1, g.getIdLong());
-                    ps.setString(2, g.getOwner().getUser().getId());
+                    ps.setLong(1, gid);
+                    ps.setString(2, owner);
                     ps.execute();
                     ps.close();
+                    Main.prefix.put(gid, "%");
+                    HashMap<String, ArrayList<String>> map = new HashMap<>();
+                    map.put("modules" , new ArrayList<>(Collections.singletonList("main")));
+                    map.put("banUsers", new ArrayList<>(Collections.singletonList(""    )));
+                    map.put("banRoles", new ArrayList<>(Collections.singletonList(""    )));
+                    map.put("admUsers", new ArrayList<>(Collections.singletonList(owner )));
+                    map.put("admRoles", new ArrayList<>(Collections.singletonList(""    )));
+                    Main.settings.put(gid, map);
                 }
-            }
-            if (!fine) {
-                System.out.println("SHUTDOWN IMMINENT");
-                event.getJDA().shutdown();
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -183,11 +203,43 @@ public class Main extends ListenerAdapter implements CH {
 
         for (CommandHost ch : commandHosts.values()) ch.onReady(event);
 
-        for (Long g : Main.settings.keySet()) {
-            for (String m : Main.settings.get(g).get("modules")) {
-                if (commandHosts.containsKey(m)) commandHosts.get(m).onEnabled(g);
+//        for (Long g : Main.settings.keySet()) {
+//            for (String m : Main.settings.get(g).get("modules")) {
+//                if (commandHosts.containsKey(m)) commandHosts.get(m).onEnabled(g, null);
+//            }
+//        }
+    }
+
+    @Override
+    public void onGuildJoin(GuildJoinEvent event) {
+        try {
+            Guild g = event.getGuild();
+            long gid = g.getIdLong();
+            if (!settings.containsKey(gid)) {
+                System.out.println("INITIALISING DB FOR " + g.getName());
+                String owner = g.getOwner().getUser().getId();
+                String botOwner = g.getJDA().asBot().getApplicationInfo().complete().getOwner().getId();
+                if (!owner.equals(botOwner)) owner += ";" + botOwner;
+                PreparedStatement ps = conn.prepareStatement("INSERT INTO servers VALUES (?,'%','main','','',?,'')");
+                ps.setLong(1, gid);
+                ps.setString(2, owner);
+                ps.execute();
+                ps.close();
+                Main.prefix.put(gid, "%");
+                HashMap<String, ArrayList<String>> map = new HashMap<>();
+                map.put("modules" , new ArrayList<>(Collections.singletonList("main")));
+                map.put("banUsers", new ArrayList<>(Collections.singletonList(""    )));
+                map.put("banRoles", new ArrayList<>(Collections.singletonList(""    )));
+                map.put("admUsers", new ArrayList<>(Collections.singletonList(owner )));
+                map.put("admRoles", new ArrayList<>(Collections.singletonList(""    )));
+                Main.settings.put(gid, map);
             }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildJoin(event);
     }
 
     @Override
@@ -288,14 +340,14 @@ public class Main extends ListenerAdapter implements CH {
     * */
 
     @Override
-    public void onGuildMessageDelete(GuildMessageDeleteEvent event) {
-        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
-            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMessageDelete(event);
-    }
-    @Override
     public void onGuildMessageEmbed(GuildMessageEmbedEvent event) {
         for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
             if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMessageEmbed(event);
+    }
+    @Override
+    public void onGuildMessageDelete(GuildMessageDeleteEvent event) {
+        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
+            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildMessageDelete(event);
     }
     @Override
     public void onGuildMessageReactionAdd(GuildMessageReactionAddEvent event) {
@@ -315,34 +367,9 @@ public class Main extends ListenerAdapter implements CH {
 
     //Guild Events
     @Override
-    public void onGuildJoin(GuildJoinEvent event) {
-        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
-            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildJoin(event);
-    }
-    @Override
     public void onGuildLeave(GuildLeaveEvent event) {
         for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
             if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildLeave(event);
-    }
-    @Override
-    public void onGuildAvailable(GuildAvailableEvent event) {
-        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
-            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildAvailable(event);
-    }
-    @Override
-    public void onGuildUnavailable(GuildUnavailableEvent event) {
-        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
-            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUnavailable(event);
-    }
-    @Override
-    public void onGuildBan(GuildBanEvent event) {
-        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
-            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildBan(event);
-    }
-    @Override
-    public void onGuildUnban(GuildUnbanEvent event) {
-        for (String m : Main.settings.get(event.getGuild().getIdLong()).get("modules"))
-            if (commandHosts.containsKey(m)) commandHosts.get(m).onGuildUnban(event);
     }
 
     //Guild Update Events

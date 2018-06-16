@@ -21,14 +21,14 @@ public class Info extends Command {
 
     @Override
     public void run(Message m) {
-        String[] args = getArgs(m);
-        String ui = UserInfo.get(args, m);
+        String arg = getArg(m);
+        String ui = UserInfo.get(arg, m);
         if (!ui.startsWith("$ERROR$")) { send(ui); return; }
-        String ri = RoleInfo.get(args, m);
+        String ri = RoleInfo.get(arg, m);
         if (!ri.startsWith("$ERROR$")) { send(ri); return; }
-        String ci = ChannelInfo.get(args, m);
+        String ci = ChannelInfo.get(arg, m);
         if (!ci.startsWith("$ERROR$")) { send(ci); return; }
-        String ei = EmoteInfo.get(args, m);
+        String ei = EmoteInfo.get(arg, m);
         if (!ei.startsWith("$ERROR$")) { send(ei); return; }
         send("ERROR, do specific command for more details");
     }

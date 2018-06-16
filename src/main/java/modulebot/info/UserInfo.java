@@ -30,45 +30,47 @@ public class UserInfo extends Command {
 
     @Override
     public void run(Message m) {
-        String o = get(getArgs(m), m);
+        String o = get(getArg(m), m);
         if (o.startsWith("$ERROR$")) o = o.substring(7);
         send(o);
     }
 
-    static String get(String[] args, Message m) {
+    static String get(String args, Message m) {
         User u = null;
-        if (args.length == 0) u = m.getAuthor();
+        if (args.equals("")) u = m.getAuthor();
         else {
-            if (args[0].matches("\\d{17,18}") && m.getJDA().getUserById(args[0]) != null)
-                u = m.getJDA().getUserById(args[0]);
+            if (args.matches("\\d{17,18}") && m.getJDA().getUserById(args) != null)
+                u = m.getJDA().getUserById(args);
             else {
                 int e = 0;
-                List<User> users = m.getJDA().getUsersByName(args[0], true);
-                List<Member> members = m.getGuild().getMembersByEffectiveName(args[0], true);
+                List<User> users = m.getJDA().getUsersByName(args, true);
+                List<Member> members = m.getGuild().getMembersByEffectiveName(args, true);
                 if (m.getMentionedUsers().size() > 0) {
                     if (m.getMentionedUsers().size() > 1) e = 1;
                     else u = m.getMentionedUsers().get(0);
-                } else if (users.size() != 0) {
+                }
+                if (users.size() != 0) {
                     if (users.size() > 1) {
-                        List<User> users2 = m.getJDA().getUsersByName(args[0], false);
+                        List<User> users2 = m.getJDA().getUsersByName(args, false);
                         if (users2.size() != 0) {
                             if (users2.size() > 1) e = 1;
                             else u = users2.get(0);
                         } else e = 1;
                     } else u = users.get(0);
-                } else if (members.size() != 0) {
+                }
+                if (members.size() != 0) {
                     if (members.size() > 1) {
-                        List<Member> members2 = m.getGuild().getMembersByEffectiveName(args[0], false);
+                        List<Member> members2 = m.getGuild().getMembersByEffectiveName(args, false);
                         if (members2.size() != 0) {
                             if (members2.size() > 1) e = 1;
                             else u = members2.get(0).getUser();
                         } else e = 1;
                     } else u = members.get(0).getUser();
-                } else e = 2;
+                }
                 if (e == 1) {
                     return "$ERROR$Multiple users found, use ID if possible";
                 }
-                if (e == 2) {
+                if (u == null) {
                     return "$ERROR$User not found";
                 }
             }

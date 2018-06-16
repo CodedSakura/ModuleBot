@@ -1,11 +1,13 @@
 package modulebot.main.cmds;
 
-import modulebot.main.hosts.Command;
 import modulebot.main.Main;
+import modulebot.main.hosts.Command;
 import net.dv8tion.jda.core.entities.Message;
 
 import java.sql.PreparedStatement;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.ConcurrentModificationException;
 
 public class Module extends Command {
     @Override
@@ -40,6 +42,7 @@ public class Module extends Command {
         } else if (args[0].equals("list")) {
             StringBuilder sb = new StringBuilder("```diff\n");
             ArrayList<String> gModules = Main.settings.get(gid).get("modules");
+            gModules.sort(Comparator.comparing(String::toLowerCase));
             for (String module : Main.modules.keySet()) {
                 sb.append(gModules.contains(module) ? "+" : "-").append(" ").append(module).append(" - ")
                         .append(Main.moduleInfo.get(module)).append("\n");
@@ -60,11 +63,15 @@ public class Module extends Command {
                     st.close();
                     send("Module \"" + args[1] + "\" enabled");
 
-                    for (String n : Main.settings.get(m.getGuild().getIdLong()).get("modules")) {
-                        if (Main.commandHosts.containsKey(n)) {
-                            Main.commandHosts.get(n).onEnabled(gid);
-                            Main.commandHosts.get(n).onToggled(gid);
+                    try {
+                        for (String n : Main.settings.get(m.getGuild().getIdLong()).get("modules")) {
+                            if (Main.commandHosts.containsKey(n)) {
+                                Main.commandHosts.get(n).onEnabled(gid, m.getTextChannel());
+                                Main.commandHosts.get(n).onToggled(gid, m.getTextChannel());
+                            }
                         }
+                    } catch (ConcurrentModificationException ignored) {
+                        m.getChannel().deleteMessageById(messageID).queue();
                     }
                 }
             } else {
@@ -87,8 +94,8 @@ public class Module extends Command {
 
                     for (String n : Main.settings.get(m.getGuild().getIdLong()).get("modules")) {
                         if (Main.commandHosts.containsKey(n)) {
-                            Main.commandHosts.get(n).onDisabled(gid);
-                            Main.commandHosts.get(n).onToggled(gid);
+                            Main.commandHosts.get(n).onDisabled(gid, m.getTextChannel());
+                            Main.commandHosts.get(n).onToggled(gid, m.getTextChannel());
                         }
                     }
                 }

@@ -1,9 +1,9 @@
 package modulebot.info;
 
+import modulebot.main.hosts.CH;
 import modulebot.main.hosts.Command;
-import modulebot.main.hosts.CommandHost;
 
-public class Main extends CommandHost {
+public class Main implements CH {
     @Override
     public Command[] getCommands() {
         return new Command[] {

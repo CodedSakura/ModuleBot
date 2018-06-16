@@ -1,11 +1,13 @@
 package modulebot.main.hosts;
 
+import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.events.ReadyEvent;
 import net.dv8tion.jda.core.events.emote.EmoteAddedEvent;
 import net.dv8tion.jda.core.events.emote.EmoteRemovedEvent;
 import net.dv8tion.jda.core.events.emote.update.EmoteUpdateNameEvent;
 import net.dv8tion.jda.core.events.emote.update.EmoteUpdateRolesEvent;
-import net.dv8tion.jda.core.events.guild.*;
+import net.dv8tion.jda.core.events.guild.GuildJoinEvent;
+import net.dv8tion.jda.core.events.guild.GuildLeaveEvent;
 import net.dv8tion.jda.core.events.guild.member.*;
 import net.dv8tion.jda.core.events.guild.update.*;
 import net.dv8tion.jda.core.events.guild.voice.*;
@@ -24,9 +26,9 @@ public abstract class CommandHost implements CH {
 
     public void onReady(ReadyEvent event) {}
 
-    public void onEnabled(long guild) {}
-    public void onDisabled(long guild) {}
-    public void onToggled(long guild) {}
+    public void onEnabled(long guild, TextChannel c) {}
+    public void onDisabled(long guild, TextChannel c) {}
+    public void onToggled(long guild, TextChannel c) {}
 
     //Message Events
     public void onGuildMessageReceived(GuildMessageReceivedEvent event) {}
@@ -40,10 +42,6 @@ public abstract class CommandHost implements CH {
     //Guild Events
     public void onGuildJoin(GuildJoinEvent event) {}
     public void onGuildLeave(GuildLeaveEvent event) {}
-    public void onGuildAvailable(GuildAvailableEvent event) {}
-    public void onGuildUnavailable(GuildUnavailableEvent event) {}
-    public void onGuildBan(GuildBanEvent event) {}
-    public void onGuildUnban(GuildUnbanEvent event) {}
 
     //Guild Update Events
     public void onGuildUpdateAfkChannel(GuildUpdateAfkChannelEvent event) {}

@@ -27,7 +27,7 @@ public class EmoteInfo extends Command {
 
     @Override
     public void run(Message m) {
-        String o = get(getArgs(m), m);
+        String o = get(getArg(m), m);
         if (o.startsWith("$ERROR$")) o = o.substring(7);
         send(o);
     }
@@ -38,20 +38,20 @@ public class EmoteInfo extends Command {
             "$ERROR$Role not found"
     };
 
-    static String get(String[] args, Message m) {
+    static String get(String args, Message m) {
         Emote e;
-        if (args.length == 0) return ERR[0];
+        if (args.equals("")) return ERR[0];
         else {
-            if (args[0].matches("\\d{17,18}") && m.getGuild().getRoleById(args[0]) != null)
-                e = m.getGuild().getEmoteById(args[0]);
+            if (args.matches("\\d{17,18}") && m.getGuild().getRoleById(args) != null)
+                e = m.getGuild().getEmoteById(args);
             else {
-                List<Emote> emotes = m.getGuild().getEmotesByName(args[0], true);
+                List<Emote> emotes = m.getGuild().getEmotesByName(args, true);
                 if (m.getEmotes().size() > 0) {
                     if (m.getEmotes().size() > 1) return ERR[1];
                     else e = m.getEmotes().get(0);
                 } else if (emotes.size() != 0) {
                     if (emotes.size() > 1) {
-                        List<Emote> emotes2 = m.getGuild().getEmotesByName(args[0], false);
+                        List<Emote> emotes2 = m.getGuild().getEmotesByName(args, false);
                         if (emotes2.size() != 0) {
                             if (emotes2.size() > 1) return ERR[1];
                             else e = emotes2.get(0);

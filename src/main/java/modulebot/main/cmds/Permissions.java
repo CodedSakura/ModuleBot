@@ -30,8 +30,10 @@ public class Permissions extends Command {
     @Override
     public void run(Message m) throws Exception {
         String[] args = getArgs(m);
-        long gid = m.getGuild().getIdLong(); // TODO: remove my ID from code    vvvvvvvvvvvvvvvvvv
-        if (!args[0].equals("list") && !admin && !m.getAuthor().getId().equals("167348844005163009")) {
+        long gid = m.getGuild().getIdLong();
+        if (args.length == 0) {
+            defaultRun();
+        } else if (!args[0].equals("list") && !admin) {
             send("This command is admin only");
         } else if (args[0].equals("list")) {
             ArrayList<String> banUsers = Main.settings.get(gid).get("banUsers");
