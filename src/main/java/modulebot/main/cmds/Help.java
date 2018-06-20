@@ -32,7 +32,7 @@ public class Help extends Command {
         else if (args.length == 1) {
             if (args[0].equals("list")) {
                 StringBuilder sb = new StringBuilder("```\n");
-                for (String module : Main.modules.keySet()) {
+                for (String module : Main.settings.get(id).get("modules")) {
                     sb.append(module).append("\n");
                     for (Command c : Main.modules.get(module)) {
                         sb.append("\t").append(c.getName()).append("\n");

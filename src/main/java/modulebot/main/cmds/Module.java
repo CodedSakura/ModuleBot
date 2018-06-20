@@ -42,8 +42,9 @@ public class Module extends Command {
         } else if (args[0].equals("list")) {
             StringBuilder sb = new StringBuilder("```diff\n");
             ArrayList<String> gModules = Main.settings.get(gid).get("modules");
-            gModules.sort(Comparator.comparing(String::toLowerCase));
-            for (String module : Main.modules.keySet()) {
+            ArrayList<String> modules = new ArrayList<>(Main.modules.keySet());
+            modules.sort(Comparator.comparing(String::toLowerCase));
+            for (String module : modules) {
                 sb.append(gModules.contains(module) ? "+" : "-").append(" ").append(module).append(" - ")
                         .append(Main.moduleInfo.get(module)).append("\n");
             }
@@ -65,7 +66,7 @@ public class Module extends Command {
 
                     try {
                         for (String n : Main.settings.get(m.getGuild().getIdLong()).get("modules")) {
-                            if (Main.commandHosts.containsKey(n)) {
+                            if (Main.commandHosts.containsKey(n) && n.equals(args[1])) {
                                 Main.commandHosts.get(n).onEnabled(gid, m.getTextChannel());
                                 Main.commandHosts.get(n).onToggled(gid, m.getTextChannel());
                             }
@@ -93,7 +94,7 @@ public class Module extends Command {
                     send("Module \"" + args[1] + "\" disabled");
 
                     for (String n : Main.settings.get(m.getGuild().getIdLong()).get("modules")) {
-                        if (Main.commandHosts.containsKey(n)) {
+                        if (Main.commandHosts.containsKey(n) && n.equals(args[1])) {
                             Main.commandHosts.get(n).onDisabled(gid, m.getTextChannel());
                             Main.commandHosts.get(n).onToggled(gid, m.getTextChannel());
                         }

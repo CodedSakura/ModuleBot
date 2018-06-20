@@ -3,6 +3,7 @@ package modulebot.PCC;
 import modulebot.main.hosts.Command;
 import modulebot.main.hosts.CommandHost;
 import net.dv8tion.jda.core.entities.TextChannel;
+import net.dv8tion.jda.core.events.guild.member.GuildMemberJoinEvent;
 
 import java.sql.PreparedStatement;
 
@@ -44,6 +45,15 @@ public class Main extends CommandHost {
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    @Override
+    public void onGuildMemberJoin(GuildMemberJoinEvent event) {
+        if (event.getMember().getUser().isBot()) {
+            event.getGuild().getController().addRolesToMember(event.getMember(), event.getGuild().getRoleById("213312815954526208")).queue();
+        } else {
+            event.getGuild().getController().addRolesToMember(event.getMember(), event.getGuild().getRoleById("145578521702432768")).queue();
         }
     }
 }

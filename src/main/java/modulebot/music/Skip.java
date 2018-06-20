@@ -1,27 +1,27 @@
-package modulebot.info;
+package modulebot.music;
 
 import modulebot.main.hosts.Command;
 import net.dv8tion.jda.core.entities.Message;
 
-public class ${NAME} extends Command {
+public class Skip extends Command {
     @Override
     public String getName() {
-        #set($name = $NAME.toLowerCase())
-        return "${name}";
+        return "skip";
     }
 
     @Override
     public String getHelp() {
-        return "${INFO}";
+        return "Skips currently playing track";
     }
 
     @Override
     public String[] getUsages() {
-        return new String[] {""};
+        return new String[]{""};
     }
 
     @Override
     public void run(Message m) {
-        
+        Main.getMusicManager(m.getGuild()).scheduler.nextTrack();
+        send("Skipped to next track");
     }
 }

@@ -32,8 +32,19 @@ public abstract class Command implements CMDI {
         return this;
     }
 
-    // TODO: convert to embeds
+    // TODO: fix embeds
     public void defaultRun() {
+//        EmbedBuilder eb = new EmbedBuilder();
+//        eb.setTitle(Main.prefix.get(channel.getGuild().getIdLong()) + getName());
+//        eb.setDescription(getHelp());
+//        if (getUsages().length > 0) {
+//            eb.addField("Usages:", "", false);
+//        }
+//        for (String s : getUsages()) {
+//            eb.addField("", "`" + getName() + " " + s + "`", true);
+//        }
+//        send(eb.build());
+
         StringBuilder usages = new StringBuilder();
         for (String s : getUsages()) {
             usages.append("`").append(getName()).append(" ").append(s).append("`\n");

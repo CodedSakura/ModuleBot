@@ -2,15 +2,17 @@ package modulebot.greeter;
 
 import modulebot.main.hosts.Command;
 import modulebot.main.hosts.CommandHost;
+import net.dv8tion.jda.core.entities.Guild;
 import net.dv8tion.jda.core.entities.TextChannel;
 import net.dv8tion.jda.core.events.ReadyEvent;
 import net.dv8tion.jda.core.events.guild.member.GuildMemberJoinEvent;
-import org.json.JSONObject;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.HashMap;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class Main extends CommandHost {
     HashMap<Long, HashMap<Long, String>> greetings = new HashMap<>();
@@ -64,24 +66,40 @@ public class Main extends CommandHost {
         }
     }
 
-
-
-    private static JSONObject roles;
-    private static JSONObject channels;
-    private static JSONObject config;
     @Override
     public void onGuildMemberJoin(GuildMemberJoinEvent event) {
-        if (event.getMember().getUser().isBot()) {
-            event.getGuild().getController().addRolesToMember(event.getMember(), event.getGuild().getRoleById(roles.getString("bot"))).queue();
-            event.getGuild().getTextChannelById(channels.getString("default")).sendMessage("A bot (" + event.getMember().getEffectiveName() + ") was added to the guild").queue();
-        } else {
-            event.getGuild().getController().addRolesToMember(event.getMember(), event.getGuild().getRoleById(roles.getString("member"))).queue();
-            event.getGuild().getTextChannelById(channels.getString("default")).sendMessage("" +
-                    "Welcome, " + event.getMember().getUser().getAsMention() + "! Please read <#" + channels.getString("readme") + ">!\n" +
-                    "To get a language role just do `" + config.getString("role cmd") + "`\n" +
-                    "To see a list of available roles, do `" + config.getString("roles cmd") + "`!"
-            ).queue();
-            event.getGuild().getTextChannelById(channels.getString("admin")).sendMessage(event.getMember().getEffectiveName() + " joined the guild!").queue();
+        Guild g = event.getGuild();
+        try {
+            PreparedStatement ps = modulebot.main.Main.conn.prepareStatement("SELECT chID, text from greeter where gID = ? and target = ?");
+            ps.setLong(1, g.getIdLong());
+            ps.setString(2, event.getMember().getUser().isBot() ? "b" : "u");
+            ResultSet rs = ps.executeQuery();
+            Map<Long, ArrayList<String>> greets = new HashMap<>();
+            while (rs.next()) {
+                long chID = rs.getLong("chID");
+                String text = rs.getString("text");
+                if (!greets.containsKey(chID)) greets.put(chID, new ArrayList<>());
+                greets.get(chID).add(text);
+            }
+            rs.close();
+            ps.close();
+            if (greets.size() == 0) return;
+            Random r = new Random();
+            SimpleDateFormat format = new SimpleDateFormat("EEE, MMM d, yyy, HH:mm:ss z");
+            format.setTimeZone(TimeZone.getTimeZone("GMT"));
+            for (Long chID : greets.keySet()) {
+                ArrayList<String> texts = greets.get(chID);
+                String text;
+                if (texts.size() > 1) text = texts.get(r.nextInt(texts.size()));
+                else text = texts.get(0);
+                text = text.replaceAll("(?i)\\{\\{name}}", event.getUser().getName())
+                        .replaceAll("(?i)\\{\\{mention}}", event.getUser().getAsMention())
+                        .replaceAll("(?i)\\{\\{time}}", format.format(new Date()))
+                        .replaceAll("(?i)\\{\\{guild}}", g.getName());
+                g.getTextChannelById(chID).sendMessage(text).queue();
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 }

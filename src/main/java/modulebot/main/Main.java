@@ -127,17 +127,6 @@ public class Main extends ListenerAdapter implements CH {
             e.printStackTrace();
         }
 
-        /* TODO: implement following
-        random
-          dice
-          8ball
-          flip
-        convert
-        latex
-        time
-        */
-
-        // TODO: fill this list
         for (CH ch : new CH[] {
                 this,
                 new modulebot.info.Main(),
@@ -145,7 +134,12 @@ public class Main extends ListenerAdapter implements CH {
                 new modulebot.calc.Main(),
                 new modulebot.PCC.Main(),
                 new modulebot.eval.Main(),
-                new modulebot.greeter.Main()
+                new modulebot.greeter.Main(),
+                new modulebot.random.Main(),
+                new modulebot.time.Main(),
+                new modulebot.latex.Main(),
+                new modulebot.convert.Main(),
+                new modulebot.music.Main()
         }) {
             if (ch instanceof CommandHost) commandHosts.put(ch.getName().toLowerCase(), (CommandHost) ch);
             modules.put(ch.getName().toLowerCase(), ch.getCommands());

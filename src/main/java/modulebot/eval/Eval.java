@@ -21,11 +21,15 @@ public class Eval extends Command {
 
     @Override
     public String[] getUsages() {
-        return new String[]{"[code]", "classes"};
+        return new String[]{"[code]", "keys"};
     }
 
     @Override
     public void run(Message m) {
+        if (!admin) {
+            send("This command is admin only");
+            return;
+        }
         ScriptEngine se = new ScriptEngineManager().getEngineByName("Nashorn");
         se.put("bot", m.getJDA());
         se.put("self", m.getAuthor());
@@ -35,7 +39,7 @@ public class Eval extends Command {
         se.put("message", m);
         se.put("MessageBuilder", new MessageBuilder());
         se.put("EmbedBuilder", new EmbedBuilder());
-        se.put("help", "this eval command has 'bot', 'self', 'guild', 'member', 'channel', 'message', 'MessageBuilder', 'EmbedBuilder'");
+        se.put("keys", "this eval command has 'bot', 'self', 'guild', 'member', 'channel', 'message', 'MessageBuilder', 'EmbedBuilder'");
         String text = getArg(m);
         if (text.startsWith("```")) {
             text = text.substring(3, text.length() - 3);

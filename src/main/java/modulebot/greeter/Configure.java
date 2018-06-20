@@ -61,8 +61,8 @@ public class Configure extends Command {
                 data.add(new String[] {
                         Long.toString(rs.getLong("id")),
                         m.getGuild().getTextChannelById(rs.getLong("chID")).getName(),
-                        rs.getString("text"),
-                        rs.getString("target").equals("u") ? "users" : "bots"
+                        rs.getString("target").equals("u") ? "users" : "bots",
+                        rs.getString("text")
                 });
             }
             rs.close();
@@ -122,7 +122,7 @@ public class Configure extends Command {
     }
 
     private String shorten(String s) {
-        int l = 24;
+        int l = 48;
         if (s.length() <= l) return s;
         return s.substring(0, l - 3) + "...";
     }
