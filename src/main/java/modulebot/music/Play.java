@@ -22,7 +22,8 @@ public class Play extends Command {
 
     @Override
     public String[] getUsages() {
-        return new String[]{"{link}", "youtube:[search]"};
+        //noinspection SpellCheckingInspection
+        return new String[]{"{link}", "ytsearch:[search]"};
     }
 
     @Override
@@ -45,6 +46,7 @@ public class Play extends Command {
     }
 
     private void play(GuildMusicManager mng, String url) {
+        if (url.startsWith("\u202a")) url = url.substring(1);
         if (url.startsWith("<") && url.endsWith(">")) url = url.substring(1, url.length() - 1);
 
         Main.playerManager.loadItemOrdered(mng, url, new AudioLoadResultHandler() {

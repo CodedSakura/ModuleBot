@@ -31,11 +31,10 @@ public class Main extends CommandHost {
                 new Volume(),
                 new Restart(),
                 new Reset(),
-                new NowPlaying(),
-                new NP(),
-                new List(),
-                new Queue(),
-                new Shuffle()
+                new NowPlaying(), new NP(),
+                new List(), new Queue(),
+                new Shuffle(),
+                new Sample()
         };
     }
 
@@ -68,7 +67,6 @@ public class Main extends CommandHost {
                 }
             }
         }
-//        g.getAudioManager().setSendingHandler(musicManager.getSendHandler());
         return musicManager;
     }
 }
