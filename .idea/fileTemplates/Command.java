@@ -1,6 +1,6 @@
-package modulebot.info;
+package eu.thephisics101.modulebot;
 
-import modulebot.main.hosts.Command;
+import eu.thephisics101.modulebot.hosts.Command;
 import net.dv8tion.jda.core.entities.Message;
 
 public class ${NAME} extends Command {
