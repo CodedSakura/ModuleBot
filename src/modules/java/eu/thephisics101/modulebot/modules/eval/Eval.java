@@ -51,7 +51,7 @@ public class Eval extends Command {
         try {
             send("Evaluated successfully:```js\n" + se.eval(text) + " ```");
         } catch (Exception e) {
-            send("An exception was thrown:```\n" + e + " ```");
+            send("An exception was thrown:```css\n" + e + " ```");
         }
     }
 }

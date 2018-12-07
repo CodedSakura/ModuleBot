@@ -3,6 +3,7 @@
   <component name="CompilerConfiguration">
     <bytecodeTargetLevel>
       <module name="modulebot" target="1.8" />
+      <module name="modulebot_main" target="1.8" />
       <module name="modulebot_test" target="1.8" />
     </bytecodeTargetLevel>
   </component>

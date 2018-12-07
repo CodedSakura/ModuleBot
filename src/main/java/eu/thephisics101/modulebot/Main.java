@@ -63,7 +63,7 @@ public class Main extends ListenerAdapter implements CH {
     public static String description;
     public static Command[] commands;
 
-    public static void main(String[] args) throws LoginException, InterruptedException, ClassNotFoundException, IOException, InstantiationException, IllegalAccessException {
+    public static void main(String[] args) throws LoginException, ClassNotFoundException, IOException {
         if (args.length != 5) {
             System.out.println("Bad arguments!");
             System.out.println("Expecting: token, DB User, DB Pass, DB Name, DB Server");
@@ -75,7 +75,7 @@ public class Main extends ListenerAdapter implements CH {
         }
         ListenerAdapter la = new Main(args[1], args[2], args[3], args[4]);
         if (!launchSuccess) return;
-        new JDABuilder(AccountType.BOT).setToken(args[0]).addEventListener(la).buildBlocking();
+        new JDABuilder(AccountType.BOT).setToken(args[0]).addEventListener(la).build();
     }
 
     private static void openDB(String user, String pass, String name, String server) throws SQLException {
@@ -108,6 +108,7 @@ public class Main extends ListenerAdapter implements CH {
     public String getDescription() { return "Hosts main commands"; }
 
     private Main(String user, String pass, String name, String server) throws IOException, ClassNotFoundException {
+//        System.out.println(this.getClass().toString());
         try {
             Main.openDB(user, pass, name, server);
             Statement st = Main.conn.createStatement();

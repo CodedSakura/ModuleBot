@@ -63,10 +63,10 @@ public abstract class Command implements CMDI {
         send(new MessageBuilder().append(m).build());
     }
     public void send(MessageEmbed m) {
-        send(new MessageBuilder().setEmbed(m).build());
+        send(new MessageBuilder().setContent("").setEmbed(m).build());
     }
     public void send(Object m) {
-        send(new MessageBuilder().append(m).build());
+        send(new MessageBuilder().setEmbed(null).setContent("").append(m).build());
     }
     private void send(Message m) {
         if (messageID == null) messageID = channel.sendMessage(m).complete().getId();
