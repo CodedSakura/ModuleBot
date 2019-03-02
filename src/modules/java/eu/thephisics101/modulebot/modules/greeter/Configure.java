@@ -29,8 +29,8 @@ public class Configure extends Command {
     public void run(Message m) throws Exception {
         String[] args = getArgs(m);
         String helpText = "The greeter separates users and bots, so you can set up different greetings for each of them\n" +
-                "Use `greeter config add-greet u [channel] [text]` to configure a greeting for users\n" +
-                "Use `greeter config add-greet b [channel] [text]` to configure it for bots\n" +
+                "Use `greeter config add u [channel] [text]` to configure a greeting for users\n" +
+                "Use `greeter config add b [channel] [text]` to configure it for bots\n" +
                 "You can have multiple greetings for each, if they're in the same channel, one random appropriate greeting\n" +
                 "\n" +
                 "Greetings use a small and simple formatting language, that has the following:\n" +
@@ -42,9 +42,9 @@ public class Configure extends Command {
                 "Example:\n" +
                 "If you want to create 2 user greetings in #general, one of which would be randomly selected when someone joins,\n" +
                 "and a bot greeting (not really a greeting) in #bots, you would run these commands (in any order): ```\n" +
-                "greeter config add-greet u #general Welcome {{mention}}, please have a read of #readme!\n" +
-                "greeter config add-greet u #general {{mention}}, you have been randomly selected to be welcome in {{guild}}!\n" +
-                "greeter config add-greet b #bots We have a new bot, {{name}}, added at {{time}}\n" +
+                "greeter config add u #general Welcome {{mention}}, please have a read of #readme!\n" +
+                "greeter config add u #general {{mention}}, you have been randomly selected to be welcome in {{guild}}!\n" +
+                "greeter config add b #bots We have a new bot, {{name}}, added at {{time}}\n" +
                 "```(by #general, #readme, etc. are meant channel mentions or IDs)";
         if (!admin) {
             send("This command is admin only");

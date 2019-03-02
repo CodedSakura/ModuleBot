@@ -25,3 +25,11 @@ jar {
         attributes 'Main-Class': 'eu.thephisics101.modulebot.Main'
     }
 }
+
+task fatJar(type: Jar) {
+    manifest {
+        attributes 'Main-Class': 'eu.thephisics101.modulebot.Main'
+    }
+    from { configurations.compile.findAll { !it.name.endsWith('pom') }.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+}

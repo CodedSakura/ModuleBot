@@ -84,6 +84,7 @@ public class Main extends ListenerAdapter implements CH {
         source.setPassword(pass);
         source.setDatabaseName(name);
         source.setServerName(server);
+        source.setAutoReconnect(true);
         conn = source.getConnection();
     }
     private static void closeDB() throws SQLException {

@@ -1,6 +1,6 @@
 The greeter separates users and bots, so you can set up different greetings for each of them
-Use `greeter config add-greet u [channel] [text]` to configure a greeting for users
-Use `greeter config add-greet b [channel] [text]` to configure it for bots
+Use `greeter config add u [channel] [text]` to configure a greeting for users
+Use `greeter config add b [channel] [text]` to configure it for bots
 You can have multiple greetings for each, if they're in the same channel, one random appropriate greeting
 
 Greetings use a small and simple formatting language, that has the following:
@@ -12,7 +12,7 @@ Greetings use a small and simple formatting language, that has the following:
 Example:
 If you want to create 2 user greetings in #general, one of which would be randomly selected when someone joins,
 and a bot greeting (not really a greeting) in #bots, you would run these commands (in any order): ```
-greeter config add-greet u #general Welcome {{mention}}, please have a read of #readme!
-greeter config add-greet u #general {{mention}}, you have been randomly selected to be welcome in {{guild}}!
-greeter config add-greet b #bots We have a new bot, {{name}}, added at {{time}}
+greeter config add u #general Welcome {{mention}}, please have a read of #readme!
+greeter config add u #general {{mention}}, you have been randomly selected to be welcome in {{guild}}!
+greeter config add b #bots We have a new bot, {{name}}, added at {{time}}
 ```(by #general, #readme, etc. are meant channel mentions or IDs)

@@ -29,6 +29,9 @@ public class Roles extends Command {
     @Override
     public void run(Message m) {
         String[] args = getArgs(m);
+        for (int i = 0; i < args.length; i++) {
+            args[i] = args[i].replaceAll("_", " ");
+        }
         if (args.length < 1) {
             defaultRun();
         } else if (args[0].equals("list")) {
@@ -37,7 +40,7 @@ public class Roles extends Command {
             roles.sort(Comparator.comparing(role -> role.getName().toLowerCase()));
             StringBuilder sb = new StringBuilder("```diff\n");
             for (Role r : roles)
-                sb.append(mr.contains(r) ? "+" : "-").append(" ").append(r.getName()).append("\n");
+                sb.append(mr.contains(r) ? "+" : "-").append(" ").append(r.getName().replaceAll(" ", "_")).append("\n");
             send(sb.append("```").toString());
         } else if (args[0].equals("who-has")) {
             if (args.length < 2) {
@@ -48,7 +51,7 @@ public class Roles extends Command {
                 int a = noRole.size();
                 noRole.removeIf(member -> member.getRoles().size() > 1);
                 noRole.sort(Comparator.comparing(o -> o.getUser().getName().toLowerCase()));
-                StringBuilder sb = new StringBuilder("").append(noRole.size()).append(" out of ").append(a)
+                StringBuilder sb = new StringBuilder().append(noRole.size()).append(" out of ").append(a)
                         .append(" users don't have a language role:\n");
                 noRole.forEach(
                         member -> sb.append("\t").append(member.getUser().getName()).append("#")
@@ -103,8 +106,8 @@ public class Roles extends Command {
             StringBuilder removed = new StringBuilder("You no longer have the role").append(s(toRM.size())).append(": ");
             for (Role role1 : toADD) added.append("`").append(role1.getName()).append("`, ");
             for (Role role : toRM) removed.append("`").append(role.getName()).append("`, ");
-            if (added.length() > 2) added = added.reverse().delete(0, 2).reverse();
-            if (removed.length() > 2) removed = removed.reverse().delete(0, 2).reverse();
+            if (added.length() > 2) added.reverse().delete(0, 2).reverse();
+            if (removed.length() > 2) removed.reverse().delete(0, 2).reverse();
             send("" +
                     (toADD.size() > 0 ? added.append("\n").toString() : "") +
                     (toRM.size() > 0 ? removed.toString() : "")
@@ -120,7 +123,8 @@ public class Roles extends Command {
                 "145578521702432768", // Members
                 "145571481710100480", // Owner
                 "278264459296899072", // Aurora Bot
-                "347129489618239499"  // MathBot
+                "347129489618239499", // MathBot
+                "476716097865777163", // BobbyBot
         }) {
             out.remove(g.getRoleById(s));
         }
